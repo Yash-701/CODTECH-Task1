@@ -1,0 +1,74 @@
+import socket
+import requests
+from urllib.parse import urlparse
+
+def scan_ports(host, ports):
+    open_ports = []
+    for port in ports:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1)  
+            result = sock.connect_ex((host, port))
+            if result == 0:
+                open_ports.append(port)
+    return open_ports
+
+
+def check_software_version(url):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+           
+            server_header = response.headers.get('Server', '')
+            if server_header:
+                return server_header
+            
+            if "version" in response.text.lower():
+                return "Version info found in response body"
+    except requests.RequestException:
+        return None
+
+
+def network_scan(target_ip, ports):
+    print(f"Scanning {target_ip} for open ports...")
+    open_ports = scan_ports(target_ip, ports)
+    if open_ports:
+        print(f"Open ports on {target_ip}: {', '.join(map(str, open_ports))}")
+    else:
+        print(f"No open ports found on {target_ip}")
+
+
+def check_misconfigurations(url):
+    try:
+        response = requests.get(url)
+        if "Error" in response.text or "exception" in response.text.lower():
+            print(f"Potential misconfiguration or sensitive information leak found on {url}")
+    except requests.RequestException as e:
+        print(f"Failed to access {url}: {e}")
+
+def main():
+   
+    target_ip = '192.168.1.1'  
+    ports_to_scan = [22, 80, 443, 8080]  
+    software_check_urls = [
+        'https://www.python.org/',  
+    ]
+
+    
+    network_scan(target_ip, ports_to_scan)
+
+    
+    print("\nChecking software versions...")
+    for url in software_check_urls:
+        version = check_software_version(url)
+        if version:
+            print(f"Software version or information for {url}: {version}")
+        else:
+            print(f"No version information found for {url}")
+
+   
+    print("\nChecking for misconfigurations...")
+    for url in software_check_urls:
+        check_misconfigurations(url)
+
+if __name__ == "__main__":
+    main()
